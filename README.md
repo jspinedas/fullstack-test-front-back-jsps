@@ -510,7 +510,204 @@ npm run dev:web
 
 ---
 
-## 🛠 Troubleshooting
+## � Feature: Summary & Backdrop
+
+### What It Does
+
+Implements a summary screen displaying order totals (product amount + base fee + delivery fee) with a Backdrop component. The "Pay" button simulates payment initiation by changing the state to "processing" without executing actual payment logic.
+
+### Route
+
+- **Path**: `/summary`
+- Accessible after successfully saving checkout data via the modal
+- On direct access without data, shows an incomplete checkout message with a link back to the product
+
+### Calculation Rules
+
+Totals are calculated using pure function `calculateTotals(productPrice)`:
+
+```typescript
+const BASE_FEE = 1500;
+const DELIVERY_FEE = 5000;
+
+// Returns:
+{
+  productAmount: number;      // Original product price
+  baseFee: number;            // Fixed fee (1500)
+  deliveryFee: number;        // Fixed fee (5000)
+  total: number;              // Sum of all three
+}
+```
+
+Example:
+- Product: COP 20,000
+- Base Fee: COP 1,500
+- Delivery Fee: COP 5,000
+- **Total: COP 26,500**
+
+### Backdrop Component
+
+Generic, reusable wrapper component:
+- Renders a fixed-position dark overlay
+- Centers card content
+- Closes on overlay click (if `onClose` callback provided)
+- Fully responsive design
+
+Usage:
+```tsx
+<Backdrop onClose={handleClose}>
+  <YourContent />
+</Backdrop>
+```
+
+### UI: SummaryPage Component
+
+**Displays**:
+- Product name
+- Product amount (formatted currency)
+- Base fee (formatted currency)
+- Delivery fee (formatted currency)
+- **Total** (highlighted)
+
+**Buttons**:
+- **Back**: Returns to product page; resets payment intent state
+- **Pay**: Simulates payment initiation (changes state to "processing" and shows "Processing..." text for 2 seconds)
+
+**Guard Rails**:
+- If user accesses `/summary` directly without checkout data:
+  - Shows "Incomplete checkout" message
+  - Provides "Back to product" button
+  - Does NOT crash or cause errors
+
+### Redux State Structure
+
+**New Slice**: `paymentFlow`
+
+```typescript
+{
+  step: 'product' | 'checkout' | 'summary' | 'final';
+  paymentIntentStatus: 'idle' | 'processing';
+}
+```
+
+**Actions**:
+- `setStep(step)` - Updates current step
+- `beginPayment()` - Sets status to 'processing'
+- `resetPaymentIntent()` - Sets status back to 'idle'
+- `resetPaymentFlow()` - Resets to initial state (product, idle)
+
+### Navigation Flow
+
+1. User completes checkout modal → saves data
+2. Modal shows "Datos guardados" for 2 seconds
+3. Automatically navigates to `/summary` and sets step to 'checkout'
+4. Summary page displays totals
+5. User clicks "Pay" → status changes to 'processing' → back button disabled
+6. After 2 seconds (simulated), step moves to 'final' (placeholder for future payment processing)
+7. User can click "Back" to return to `/` at any time (except during processing)
+
+### Local Testing
+
+1. Start frontend:
+```bash
+npm run dev:web
+```
+
+2. Navigate to `http://localhost:5173`:
+   - See product with "Pay with credit card" button
+   
+3. Click "Pay with credit card":
+   - Modal opens
+   - Fill all fields with valid data (use example from Checkout Modal section)
+   
+4. Click "Continue":
+   - Modal shows "Datos guardados"
+   - After 2 seconds, page navigates to `/summary`
+   
+5. Verify summary page:
+   - Product name and price shown
+   - Base fee (COP 1,500) shown
+   - Delivery fee (COP 5,000) shown
+   - Total correctly calculated and highlighted
+   - "Back" and "Pay" buttons visible and enabled
+   
+6. Click "Pay":
+   - Button text changes to "Processing..."
+   - Both buttons become disabled
+   - After 2 seconds, state updates (step changes to 'final')
+   
+7. Click "Back" (before clicking "Pay"):
+   - Returns to `/` (product page)
+   - Payment state resets
+
+8. Test incomplete checkout:
+   - Open browser console and navigate directly to `http://localhost:5173/summary`
+   - See "Incomplete checkout" message
+   - Click "Back to product" to go back to `/`
+
+### Tests and Commands
+
+**Frontend** — Run: `npm run test --workspace=apps/web`
+
+- **calculateTotals.test.ts** (Unit tests):
+  - Calculates correct totals with various product prices
+  - Returns all required fields (productAmount, baseFee, deliveryFee, total)
+  - Handles zero and high values correctly
+  
+- **paymentFlowSlice.spec.ts** (Reducer tests):
+  - `setStep()`: Correctly updates payment step
+  - `beginPayment()`: Sets status to 'processing'
+  - `resetPaymentIntent()`: Resets status to 'idle'
+  - `resetPaymentFlow()`: Resets entire state to initial
+
+- **SummaryPage.test.tsx** (Component/UI tests):
+  - Renders summary with correct product and total data
+  - Shows "Incomplete checkout" when data is missing
+  - Disables buttons during processing
+  - Displays "Processing..." text when status is 'processing'
+  - Enables "Pay" button when idle
+
+**Test Count**: 
+- calculateTotals: 4 tests
+- paymentFlowSlice: 5 tests
+- SummaryPage: 6 tests
+- **Total new**: 15 tests
+- **Total in suite**: 73 tests (57 existing + 15 new + 1 removed duplicate)
+
+### Created/Modified Files
+
+**Created**:
+- [apps/web/src/store/paymentFlowSlice.ts](apps/web/src/store/paymentFlowSlice.ts) - Redux slice for payment flow
+- [apps/web/src/utils/calculateTotals.ts](apps/web/src/utils/calculateTotals.ts) - Pure calculation function
+- [apps/web/src/components/Backdrop.tsx](apps/web/src/components/Backdrop.tsx) - Reusable Backdrop component
+- [apps/web/src/SummaryPage.tsx](apps/web/src/SummaryPage.tsx) - Summary page with route
+- [apps/web/src/__tests__/calculateTotals.test.ts](apps/web/src/__tests__/calculateTotals.test.ts) - Function tests
+- [apps/web/src/__tests__/paymentFlowSlice.spec.ts](apps/web/src/__tests__/paymentFlowSlice.spec.ts) - Reducer tests
+- [apps/web/src/__tests__/SummaryPage.test.tsx](apps/web/src/__tests__/SummaryPage.test.tsx) - Component tests
+
+**Modified**:
+- [apps/web/src/main.tsx](apps/web/src/main.tsx) - Added `<BrowserRouter>` wrapper
+- [apps/web/src/App.tsx](apps/web/src/App.tsx) - Added Routes and `/summary` route
+- [apps/web/src/store/index.ts](apps/web/src/store/index.ts) - Added paymentFlowReducer to store
+- [apps/web/src/components/CheckoutModal.tsx](apps/web/src/components/CheckoutModal.tsx) - Added navigation to `/summary` on data save
+- [apps/web/src/App.css](apps/web/src/App.css) - Added Backdrop and Summary styles
+- [apps/web/src/__tests__/App.test.tsx](apps/web/src/__tests__/App.test.tsx) - Updated to use BrowserRouter
+- [apps/web/src/__tests__/CheckoutModal.test.tsx](apps/web/src/__tests__/CheckoutModal.test.tsx) - Updated to use BrowserRouter
+- [apps/web/package.json](apps/web/package.json) - Added `react-router-dom` dependency
+
+### Notes
+
+- No actual payment processing
+- No transactionId generation
+- No localStorage persistence
+- Pure function `calculateTotals()` works independently of React/Redux
+- Backdrop component is generic and reusable for future modals/overlays
+- Step 'final' is placeholder; will be used for actual payment confirmation in future
+- Payment flow state persists in Redux (no persistence across page reloads by design)
+
+---
+
+## �🛠 Troubleshooting
 
 ### Port already in use
 - **Frontend**: Change `server.port` in [apps/web/vite.config.ts](apps/web/vite.config.ts)

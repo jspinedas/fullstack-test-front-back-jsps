@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import {
   saveCheckoutData,
   closeCheckoutModal,
 } from '../store/checkoutSlice';
+import { setStep } from '../store/paymentFlowSlice';
 import {
   validateCardNumber,
   validateExpMonth,
@@ -33,21 +35,19 @@ interface FormErrors {
 
 const CheckoutModal: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
 
-  // Payment Data
   const [cardNumber, setCardNumber] = useState('');
   const [expMonth, setExpMonth] = useState('');
   const [expYear, setExpYear] = useState('');
   const [cvc, setCvc] = useState('');
   const [cardHolderName, setCardHolderName] = useState('');
 
-  // Delivery Data
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
 
-  // UI State
   const [errors, setErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -149,6 +149,8 @@ const CheckoutModal: React.FC = () => {
 
     setSuccessMessage('Datos guardados');
     setTimeout(() => {
+      dispatch(setStep('checkout'));
+      navigate('/summary');
       setSuccessMessage('');
     }, 2000);
   };
