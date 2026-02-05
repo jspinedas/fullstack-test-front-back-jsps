@@ -1,0 +1,12 @@
+.app {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+h1 {
+  color: #333;
+  font-size: 2rem;
+}
