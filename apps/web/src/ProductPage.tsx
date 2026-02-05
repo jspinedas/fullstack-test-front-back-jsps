@@ -1,12 +1,17 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProductById } from './store/productSlice';
+import { openCheckoutModal } from './store/checkoutSlice';
+import CheckoutModal from './components/CheckoutModal';
 import type { RootState, AppDispatch } from './store';
 
 const ProductPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { data, status, error } = useSelector(
     (state: RootState) => state.product,
+  );
+  const { ui: checkoutUI } = useSelector(
+    (state: RootState) => state.checkout,
   );
 
   const priceFormatter = new Intl.NumberFormat('es-CO', {
@@ -78,11 +83,16 @@ const ProductPage: React.FC = () => {
               <span className="meta-value">{data.stock}</span>
             </div>
           </div>
-          <button type="button" className="product-cta">
+          <button
+            type="button"
+            className="product-cta"
+            onClick={() => dispatch(openCheckoutModal())}
+          >
             Pay with credit card
           </button>
         </div>
       </div>
+      {checkoutUI.isCheckoutModalOpen && <CheckoutModal />}
     </div>
   );
 };
