@@ -1,0 +1,8 @@
+# Application Layer
+
+Esta carpeta contiene los casos de uso y ports (interfaces).
+
+**Reglas:**
+- Define contratos (ports) con nombres genéricos
+- Orquesta la lógica de dominio
+- No depende de detalles de infraestructura

@@ -1,0 +1,8 @@
+# Infrastructure Layer
+
+Esta carpeta contiene los adapters de infraestructura.
+
+**Reglas:**
+- Implementa los ports definidos en application
+- Aquí SÍ se pueden usar nombres de proveedores (ej: WompiAdapter)
+- Contiene detalles de HTTP, DB, servicios externos
