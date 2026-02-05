@@ -143,3 +143,127 @@ body {
     text-align: center;
   }
 }
+.backdrop-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.backdrop-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 36px;
+  box-shadow: var(--shadow);
+  max-width: 500px;
+  width: min(90vw, 500px);
+}
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.summary-content h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: var(--text-main);
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  font-size: 1rem;
+}
+
+.summary-label {
+  color: var(--text-muted);
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', sans-serif;
+}
+
+.summary-value {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.summary-divider {
+  height: 1px;
+  background: var(--card-border);
+  margin: 12px 0;
+}
+
+.summary-total {
+  padding: 16px 0;
+  font-size: 1.2rem;
+}
+
+.summary-total .summary-value {
+  color: var(--accent-strong);
+  font-size: 1.4rem;
+}
+
+.summary-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.summary-button {
+  flex: 1;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', sans-serif;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.summary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.summary-button-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #ffffff;
+  box-shadow: 0 16px 30px rgba(143, 74, 37, 0.35);
+}
+
+.summary-button-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 34px rgba(143, 74, 37, 0.4);
+}
+
+.summary-button-secondary {
+  background: var(--page-bg);
+  color: var(--text-main);
+  border: 1px solid var(--card-border);
+}
+
+.summary-button-secondary:hover:not(:disabled) {
+  background: var(--page-accent);
+}
+
+@media (max-width: 640px) {
+  .backdrop-card {
+    padding: 24px;
+    width: 95vw;
+  }
+
+  .summary-actions {
+    flex-direction: column;
+  }
+}

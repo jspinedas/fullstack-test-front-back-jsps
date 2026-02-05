@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
+import { BrowserRouter } from 'react-router-dom';
 import { configureStore, createSlice } from '@reduxjs/toolkit';
 import CheckoutModal from '../components/CheckoutModal';
 import checkoutReducer from '../store/checkoutSlice';
@@ -30,7 +31,13 @@ describe('CheckoutModal', () => {
 
   const renderWithStore = (component: React.ReactElement) => {
     const store = createTestStore();
-    return render(<Provider store={store}>{component}</Provider>);
+    return render(
+      <Provider store={store}>
+        <BrowserRouter>
+          {component}
+        </BrowserRouter>
+      </Provider>,
+    );
   };
 
   it('should render modal with title', () => {
