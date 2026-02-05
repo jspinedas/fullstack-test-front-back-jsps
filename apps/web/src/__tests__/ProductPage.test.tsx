@@ -1,9 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { store } from '../store';
-import App from '../App';
+import { configureStore } from '@reduxjs/toolkit';
+import productReducer from '../store/productSlice';
+import ProductPage from '../ProductPage';
 
-describe('App', () => {
+describe('ProductPage', () => {
   beforeEach(() => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
@@ -21,14 +22,20 @@ describe('App', () => {
     jest.resetAllMocks();
   });
 
-  it('renders product call to action', async () => {
+  it('renders product data and CTA button', async () => {
+    const store = configureStore({
+      reducer: {
+        product: productReducer,
+      },
+    });
+
     render(
       <Provider store={store}>
-        <App />
+        <ProductPage />
       </Provider>,
     );
-    expect(
-      await screen.findByText('Pay with credit card'),
-    ).toBeInTheDocument();
+
+    expect(await screen.findByText('Demo Product')).toBeInTheDocument();
+    expect(screen.getByText('Pay with credit card')).toBeInTheDocument();
   });
 });
