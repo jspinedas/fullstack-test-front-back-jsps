@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, createSlice } from '@reduxjs/toolkit';
 import productReducer from '../store/productSlice';
+import checkoutReducer from '../store/checkoutSlice';
 import ProductPage from '../ProductPage';
 
 describe('ProductPage', () => {
@@ -23,9 +24,17 @@ describe('ProductPage', () => {
   });
 
   it('renders product data and CTA button', async () => {
+    const appSlice = createSlice({
+      name: 'app',
+      initialState: { initialized: true },
+      reducers: {},
+    });
+
     const store = configureStore({
       reducer: {
+        app: appSlice.reducer,
         product: productReducer,
+        checkout: checkoutReducer,
       },
     });
 
