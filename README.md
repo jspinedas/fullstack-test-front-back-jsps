@@ -105,7 +105,7 @@ npm run dev:web
 - Se abre en `http://localhost:5173`
 - Hot Module Replacement habilitado
 - Muestra "App inicializada"
-
+ 
 #### Ejecutar Backend (NestJS)
 ```bash
 npm run dev:api
