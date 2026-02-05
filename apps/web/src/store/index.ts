@@ -1,4 +1,5 @@
 import { configureStore, createSlice } from '@reduxjs/toolkit';
+import productReducer from './productSlice';
 
 const appSlice = createSlice({
   name: 'app',
@@ -9,6 +10,7 @@ const appSlice = createSlice({
 export const store = configureStore({
   reducer: {
     app: appSlice.reducer,
+    product: productReducer,
   },
 });
 

@@ -278,6 +278,68 @@ Los siguientes features agregarán:
 
 ---
 
+## 📋 Feature: Product Page
+
+### Qué hace
+
+Muestra un producto con su stock en la UI, consumiendo un endpoint real del backend. Incluye un botón visible de pago sin lógica adicional.
+
+### Endpoint
+
+- `GET /products/:id`
+- Respuesta 200:
+```json
+{
+  "id": "product-1",
+  "name": "Demo Product",
+  "description": "Producto de ejemplo para pruebas locales",
+  "price": 20000,
+  "stock": 12
+}
+```
+- Respuesta 404:
+```json
+{
+  "message": "Product not found"
+}
+```
+
+### Cómo probar local
+
+1) Iniciar backend:
+```bash
+npm run dev:api
+```
+2) Probar endpoint:
+```bash
+curl http://localhost:3000/products/product-1
+```
+3) Iniciar frontend:
+```bash
+npm run dev:web
+```
+4) Abrir en el navegador `http://localhost:5173` y verificar:
+- Se renderiza el producto
+- Se ve el stock
+- Se ve el botón "Pay with credit card"
+5) Validar error (opcional):
+```bash
+curl http://localhost:3000/products/unknown
+```
+
+### Tests agregados y comandos
+
+- Backend:
+  - Unit test del caso de uso `GetProductByIdUseCase`
+  - Test básico del `ProductsController`
+  - Ejecutar: `npm run test --workspace=apps/api`
+- Frontend:
+  - Test unitario del reducer `productSlice`
+  - Test de render de `ProductPage`
+  - Ejecutar: `npm run test --workspace=apps/web`
+
+---
+
 ## 🛠 Solución de problemas
 
 ### Puerto ya en uso
