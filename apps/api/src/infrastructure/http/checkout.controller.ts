@@ -1,14 +1,38 @@
-import { Body, Controller, HttpCode, HttpException, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpException, HttpStatus, Inject, Post } from '@nestjs/common';
 import { StartCheckoutUseCase } from '../../application/use-cases/start-checkout.use-case';
 import { ConfirmCheckoutUseCase } from '../../application/use-cases/confirm-checkout.use-case';
 import { ConfirmCheckoutDto, StartCheckoutDto } from './checkout.dto';
+import { ProductRepositoryPort } from '../../application/ports/product-repository.port';
+import { StockRepositoryPort } from '../../application/ports/stock-repository.port';
+import { TransactionsRepositoryPort } from '../../application/ports/transactions-repository.port';
+import { DeliveriesRepositoryPort } from '../../application/ports/deliveries-repository.port';
+import { SandboxHttpAdapter } from '../adapters/sandbox/sandbox-http.adapter';
 
 @Controller('checkout')
 export class CheckoutController {
+  private readonly startCheckoutUseCase: StartCheckoutUseCase;
+  private readonly confirmCheckoutUseCase: ConfirmCheckoutUseCase;
+
   constructor(
-    private readonly startCheckoutUseCase: StartCheckoutUseCase,
-    private readonly confirmCheckoutUseCase: ConfirmCheckoutUseCase,
-  ) {}
+    @Inject('PRODUCT_REPOSITORY') productRepository: ProductRepositoryPort,
+    @Inject('STOCK_REPOSITORY') stockRepository: StockRepositoryPort,
+    @Inject('TRANSACTIONS_REPOSITORY') transactionsRepository: TransactionsRepositoryPort,
+    @Inject('DELIVERIES_REPOSITORY') deliveriesRepository: DeliveriesRepositoryPort,
+  ) {
+    const paymentProvider = new SandboxHttpAdapter();
+
+    this.startCheckoutUseCase = new StartCheckoutUseCase(
+      productRepository,
+      stockRepository,
+      transactionsRepository,
+    );
+    this.confirmCheckoutUseCase = new ConfirmCheckoutUseCase(
+      transactionsRepository,
+      paymentProvider,
+      stockRepository,
+      deliveriesRepository,
+    );
+  }
 
   @Post('start')
   @HttpCode(HttpStatus.CREATED)
