@@ -2,6 +2,7 @@ import { configureStore, createSlice } from '@reduxjs/toolkit';
 import productReducer from './productSlice';
 import checkoutReducer from './checkoutSlice';
 import paymentFlowReducer from './paymentFlowSlice';
+import transactionStatusReducer from './transactionStatusSlice';
 
 const appSlice = createSlice({
   name: 'app',
@@ -15,6 +16,7 @@ export const store = configureStore({
     product: productReducer,
     checkout: checkoutReducer,
     paymentFlow: paymentFlowReducer,
+    transactionStatus: transactionStatusReducer,
   },
 });
 
