@@ -28,6 +28,8 @@ out/
 .env.local
 .env.*.local
 ignore
+payload.json
+response.json
 
 # OS
 Thumbs.db
