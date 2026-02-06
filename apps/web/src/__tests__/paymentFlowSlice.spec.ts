@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 import paymentFlowReducer, {
   setStep,
+  rehydratePaymentFlow,
   resetPaymentFlow,
   startCheckout,
   confirmCheckout,
@@ -37,6 +38,22 @@ describe('paymentFlowSlice', () => {
 
     store.dispatch(setStep('final'));
     expect(store.getState().paymentFlow.step).toBe('final');
+  });
+
+  it('should handle rehydratePaymentFlow action', () => {
+    store.dispatch(setStep('summary'));
+    store.dispatch(
+      rehydratePaymentFlow({
+        step: 'summary',
+        transactionId: 'tx-123',
+      }),
+    );
+
+    const state = store.getState().paymentFlow;
+    expect(state.step).toBe('summary');
+    expect(state.transactionId).toBe('tx-123');
+    expect(state.paymentIntentStatus).toBe('idle');
+    expect(state.error).toBeNull();
   });
 
   it('should handle resetPaymentFlow action', () => {
