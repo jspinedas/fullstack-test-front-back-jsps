@@ -504,7 +504,7 @@ npm run dev:web
 
 - No localStorage persistence
 - No backend calls to process payments
-- No integration with real payment providers (Wompi, Stripe, etc.)
+- No integration with real payment providers
 - The modal is provider-agnostic: it stores data in Redux without provider knowledge
 - Ready for payment endpoint integration in a future feature
 
@@ -706,7 +706,449 @@ npm run dev:web
 - Payment flow state persists in Redux (no persistence across page reloads by design)
 
 ---
+## 💳 Feature: Payment Integration
 
+### What It Does
+
+Implements the complete real payment flow with backend integration: creates pending transaction, calls Sandbox payment provider, updates transaction status (SUCCESS/FAILED/PROCESSING), creates delivery and decrements stock ONLY on success, with basic idempotency to prevent duplicate charges/stock/delivery. Calculates transaction signature for API integrity validation.
+
+### Endpoints
+
+#### POST `/checkout/start`
+
+Creates a PENDING transaction and returns transactionId.
+
+**Request Body**:
+```json
+{
+  "productId": "product-1",
+  "deliveryData": {
+    "fullName": "Juan Pérez García",
+    "phone": "3001234567",
+    "address": "Cra 5 #45-30 Apto 201",
+    "city": "Bogotá"
+  },
+  "baseFee": 1500,
+  "deliveryFee": 5000
+}
+```
+
+**Response 201**:
+```json
+{
+  "transactionId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Errors**:
+- `404 Product not found` - Product does not exist
+- `400 Insufficient stock` - Not enough stock
+- `500 Internal server error` - Database error
+
+#### POST `/checkout/confirm`
+
+Calls payment provider, updates transaction, decrements stock and creates delivery on SUCCESS. Implements idempotency (doesn't repeat if already SUCCESS/FAILED).
+
+**Request Body**:
+```json
+{
+  "transactionId": "550e8400-e29b-41d4-a716-446655440000",
+  "paymentData": {
+    "cardNumber": "4242424242424242",
+    "cardExpMonth": "12",
+    "cardExpYear": "25",
+    "cardCvc": "123",
+    "cardHolder": "Juan Pérez García"
+  }
+}
+```
+
+**Response 200 (SUCCESS)**:
+```json
+{
+  "transactionId": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "SUCCESS",
+  "message": "Payment successful"
+}
+```
+
+**Response 200 (PROCESSING)**:
+```json
+{
+  "transactionId": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "PROCESSING",
+  "message": "Payment is being processed"
+}
+```
+
+**Response 200 (FAILED)**:
+```json
+{
+  "transactionId": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "FAILED",
+  "message": "Payment failed"
+}
+```
+
+**Errors**:
+- `404 Transaction not found` - TransactionId does not exist
+- `400 Payment failed` - Provider declined payment
+- `400 Insufficient stock` - Stock decrement failed
+- `500 Internal server error` - Database error
+
+#### GET `/transactions/:id`
+
+Returns transaction status and info.
+
+**Response 200**:
+```json
+{
+  "transactionId": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "SUCCESS",
+  "total": 26500,
+  "failureReason": null
+}
+```
+
+**Errors**:
+- `404 Transaction not found` - TransactionId does not exist
+- `500 Internal server error` - Database error
+
+### Architecture Details
+
+#### Domain Layer
+
+**Entities**:
+- **Transaction**: id, productId, status (PENDING/SUCCESS/FAILED/PROCESSING), amount, baseFee, deliveryFee, total, createdAt, updatedAt, provider, providerTransactionId?, failureReason?, customer
+- **Delivery**: id, transactionId, productId, status (CREATED), address, city, phone, fullName
+- **Stock**: productId, units (already existed)
+
+#### Application Layer (Ports)
+
+**Interfaces** (all ports are provider-agnostic):
+- `PaymentProviderPort`: createCardPayment(input) → Result<{ providerTransactionId, status }, ProviderError>
+- `TransactionsRepositoryPort`: createPending(tx), update(tx), getById(id)
+- `StockRepositoryPort`: getUnits(productId), decrement(productId, by)
+- `DeliveriesRepositoryPort`: create(delivery)
+- `ProductsRepositoryPort`: getById(productId) (already existed)
+
+**Use Cases** (Railway-Oriented Programming with Result types):
+
+1. **StartCheckoutUseCase**
+   - Validates product exists and stock > 0
+   - Calculates totals
+   - Creates transaction with status PENDING
+   - Returns Ok({ transactionId }) or Err(PRODUCT_NOT_FOUND | INSUFFICIENT_STOCK | DATABASE_ERROR)
+
+2. **ConfirmCheckoutUseCase**
+   - Loads transaction by id
+   - **Idempotency**: If status is already SUCCESS or FAILED, returns Ok(transaction) without repetition
+   - Calls PaymentProviderPort
+   - If SUCCESS:
+     - Decrements stock (atomic operation)
+     - Creates delivery
+     - Updates transaction to SUCCESS with providerTransactionId
+   - If FAILED:
+     - Updates transaction to FAILED with failureReason
+   - Returns Ok(transaction) or Err(TRANSACTION_NOT_FOUND | PAYMENT_FAILED | INSUFFICIENT_STOCK | DATABASE_ERROR)
+
+3. **GetTransactionStatusUseCase**
+   - Retrieves transaction by id
+   - Returns Ok({ transaction }) or Err(TRANSACTION_NOT_FOUND | DATABASE_ERROR)
+
+#### Infrastructure Layer (Adapters)
+
+**SandboxHttpAdapter** (implements PaymentProviderPort):
+- Calls Sandbox API at SANDBOX_BASE_URL
+- Steps:
+  1. Fetches acceptance token from `/merchants/:publicKey`
+  2. Creates card token at `/tokens/cards` using **public key** authentication
+  3. Creates transaction at `/transactions` using **private key** authentication with **SHA256 signature**
+  4. Returns SUCCESS (APPROVED), PROCESSING (PENDING), or FAILED based on provider response
+- Authentication:
+  - `/tokens/cards`: `Authorization: Bearer ${SANDBOX_PUBLIC_KEY}`
+  - `/transactions`: `Authorization: Bearer ${SANDBOX_PRIVATE_KEY}`
+- Signature calculation for integrity:
+  - `signature = SHA256(reference + amount_in_cents + currency + SANDBOX_INTEGRITY_KEY)`
+  - Required by Sandbox API for transaction validation
+- Environment variables (NO hardcoded keys):
+  - `SANDBOX_BASE_URL` - API endpoint
+  - `SANDBOX_PRIVATE_KEY` - Private key for transactions
+  - `SANDBOX_PUBLIC_KEY` - Public key for card tokens
+  - `SANDBOX_INTEGRITY_KEY` - Integrity key for signature calculation
+  - `SANDBOX_EVENTS_KEY` - Events key for webhook verification (future use)
+- Handles provider errors: PROVIDER_UNAVAILABLE, INVALID_CARD, CARD_DECLINED
+- Expiration year format: Sends last 2 digits (2027 → 27)
+
+**Repository Adapters** (In-Memory implementations):
+- `InMemoryTransactionsRepository`: Stores transactions in Map
+- `InMemoryDeliveriesRepository`: Stores deliveries in Map
+- `InMemoryStockRepository`: Updated to support atomic decrement
+
+**Note**: DynamoDB implementation is possible but NOT included in this feature. Current in-memory repos work correctly for local testing.
+
+#### HTTP Controllers (Thin, NO business logic)
+
+- `CheckoutController`: /checkout/start, /checkout/confirm
+- `TransactionsController`: /transactions/:id
+
+Controllers only:
+- Parse DTOs
+- Call use cases
+- Map Result<T, E> to HTTP responses
+- Handle errors with appropriate HTTP status codes
+
+### Frontend Integration
+
+**Redux State** (paymentFlowSlice updated):
+```typescript
+{
+  step: 'product' | 'checkout' | 'summary' | 'final';
+  paymentIntentStatus: 'idle' | 'processing' | 'success' | 'failed';
+  transactionId: string | null;
+  error: string | null;
+}
+```
+
+**Async Thunks**:
+- `startCheckout(input)`: Calls POST /checkout/start, saves transactionId
+- `confirmCheckout(input)`: Calls POST /checkout/confirm, updates status
+
+**Updated SummaryPage**:
+- On "Pay" button click:
+  1. If no transactionId, calls `startCheckout` first
+  2. Then calls `confirmCheckout` with transactionId and card data
+  3. Checks response status and shows appropriate message:
+     - **SUCCESS**: Navigates to 'final' step, shows "Payment successful." (green toast)
+     - **PROCESSING**: Shows "Payment is being processed. Please wait..." (info toast)
+     - **FAILED**: Shows "Payment failed. Please try again." (red toast)
+  4. Disables buttons during processing
+- Frontend state is updated based on actual payment provider response, not HTTP status
+- Shows status-aware feedback to user
+
+### Idempotency
+
+If `confirmCheckout` is called multiple times with the same transactionId:
+- **First call**: Processes payment, decrements stock, creates delivery
+- **Subsequent calls**: Returns existing transaction status WITHOUT:
+  - Calling payment provider again
+  - Decrementing stock again
+  - Creating delivery again
+
+This prevents:
+- Duplicate charges
+- Over-decrementing stock
+- Duplicate delivery records
+
+### Environment Variables
+
+Required for backend (local `.env` file or AWS Systems Manager):
+
+```bash
+SANDBOX_BASE_URL
+SANDBOX_PRIVATE_KEY
+SANDBOX_PUBLIC_KEY
+SANDBOX_EVENTS_KEY
+SANDBOX_INTEGRITY_KEY
+```
+
+**Variable Purposes**:
+- **SANDBOX_BASE_URL**: Sandbox API endpoint
+- **SANDBOX_PRIVATE_KEY**: Used for `/transactions` authentication (Bearer token)
+- **SANDBOX_PUBLIC_KEY**: Used for `/tokens/cards` authentication (Bearer token) and fetching merchant acceptance terms
+- **SANDBOX_INTEGRITY_KEY**: Used to calculate SHA256 signature for transaction payload integrity validation
+- **SANDBOX_EVENTS_KEY**: Reserved for webhook verification (future use)
+
+**IMPORTANT**: Do NOT hardcode keys in code. Always use environment variables.
+
+### Local Testing
+
+#### 1. Configure Environment Variables
+
+Create `apps/api/.env`:
+```bash
+SANDBOX_BASE_URL
+SANDBOX_PRIVATE_KEY
+SANDBOX_PUBLIC_KEY
+SANDBOX_EVENTS_KEY
+SANDBOX_INTEGRITY_KEY
+```
+
+#### 2. Start Backend
+
+```bash
+npm run dev:api
+```
+
+Backend runs on `http://localhost:3000`
+
+#### 3. Test Endpoints with cURL
+
+**Start Checkout**:
+```bash
+curl -X POST http://localhost:3000/checkout/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "productId": "product-1",
+    "deliveryData": {
+      "fullName": "Juan Pérez García",
+      "phone": "3001234567",
+      "address": "Cra 5 #45-30 Apto 201",
+      "city": "Bogotá"
+    },
+    "baseFee": 1500,
+    "deliveryFee": 5000
+  }'
+```
+
+Expected response:
+```json
+{
+  "transactionId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Confirm Checkout** (SUCCESS):
+```bash
+curl -X POST http://localhost:3000/checkout/confirm \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transactionId": "550e8400-e29b-41d4-a716-446655440000",
+    "paymentData": {
+      "cardNumber": "4242424242424242",
+      "cardExpMonth": "12",
+      "cardExpYear": "25",
+      "cardCvc": "123",
+      "cardHolder": "Juan Pérez García"
+    }
+  }'
+```
+
+Expected response (STATUS may be SUCCESS, PROCESSING, or FAILED):
+```json
+{
+  "transactionId": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "PROCESSING",
+  "message": "Payment is being processed"
+}
+```
+
+**Get Transaction Status**:
+```bash
+curl http://localhost:3000/transactions/550e8400-e29b-41d4-a716-446655440000
+```
+
+Expected response:
+```json
+{
+  "transactionId": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "SUCCESS",
+  "total": 26500,
+  "failureReason": null
+}
+```
+
+**Test Idempotency** (call confirm again with same transactionId):
+```bash
+curl -X POST http://localhost:3000/checkout/confirm \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transactionId": "550e8400-e29b-41d4-a716-446655440000",
+    "paymentData": {
+      "cardNumber": "4242424242424242",
+      "cardExpMonth": "12",
+      "cardExpYear": "25",
+      "cardCvc": "123",
+      "cardHolder": "Juan Pérez García"
+    }
+  }'
+```
+
+Response should be same as before (no duplicate processing).
+
+#### 4. Start Frontend
+
+```bash
+npm run dev:web
+```
+
+Frontend runs on `http://localhost:5173`
+
+#### 5. Test Complete Flow
+
+1. Navigate to `http://localhost:5173`
+2. See product with "Pay with credit card" button
+3. Click button → modal opens
+4. Fill all fields with test card data:
+   - Card: `4242424242424242` (VISA test card)
+   - Month: `12`
+   - Year: `2026` (or later)
+   - CVC: `123`
+   - Cardholder: `Juan Pérez García`
+   - Full Name: `María López Rodríguez`
+   - Phone: `3001234567`
+   - Address: `Cra 5 #45-30 Apto 201`
+   - City: `Bogotá`
+5. Click "Continue" → navigates to `/summary`
+6. Verify totals are correct (COP 26,500 total)
+7. Click "Pay" → Backend calls Sandbox API
+8. Sandbox responds with status (typical flow in Sandbox):
+   - **PROCESSING**: Toast shows "Payment is being processed. Please wait..." (most common in Sandbox)
+   - **SUCCESS**: Toast shows "Payment successful." (green), navigates to final step
+   - **FAILED**: Toast shows "Payment failed. Please try again." (red)
+9. Check backend console logs to see detailed API communication
+10. Check stock was decremented if payment was SUCCESS (call GET /products/product-1 again)
+
+**Sandbox Test Scenarios**:
+- Most test cards return **PENDING/PROCESSING** status
+- Sandbox environment takes time to process transactions
+- Check transaction status with GET `/transactions/:id` endpoint to verify final status
+
+### Tests and Commands
+
+**Backend** — Run: `npm run test --workspace=apps/api`
+
+- **start-checkout.use-case.spec.ts**:
+  - Creates pending transaction with valid data
+  - Returns error when product not found
+  - Returns error when stock insufficient
+  
+- **confirm-checkout.use-case.spec.ts**:
+  - Successfully confirms payment when provider returns SUCCESS
+  - Decrements stock and creates delivery on success
+  - Fails when provider declines payment
+  - Implements idempotency (doesn't repeat if already SUCCESS)
+  
+- **checkout.controller.spec.ts**:
+  - Returns transactionId on start
+  - Returns status on confirm
+  - Throws appropriate HTTP exceptions on errors
+
+**Frontend** — Run: `npm run test --workspace=apps/web`
+
+- **paymentFlowSlice.spec.ts** (updated):
+  - Handles startCheckout async actions (pending/fulfilled/rejected)
+  - Handles confirmCheckout async actions (pending/fulfilled/rejected)
+  - Updates transactionId on start success
+  - Updates status on confirm success/fail
+
+**Test Count**: 
+- Backend: 8 tests (3 start + 4 confirm + 1 controller)
+- Frontend: 4 tests added to paymentFlowSlice
+- **Total new tests**: 12
+
+### Next Steps
+
+Future features will add:
+- AWS CDK deployment with Lambda + API Gateway + DynamoDB
+- DynamoDB adapters replacing in-memory repos
+- Final confirmation screen
+- Order history
+- Email notifications
+- Retry mechanisms
+- Security enhancements
+
+---
 ## �🛠 Troubleshooting
 
 ### Port already in use
@@ -723,7 +1165,7 @@ npm install
 ### Tests failing
 ```bash
 # Make sure you're in the workspace root
-cd e:\Laboral\Wompi\fullstack-test-front-back-jsps
+cd .\fullstack-test-front-back-jsps
 npm run test
 ```
 

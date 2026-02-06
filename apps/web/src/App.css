@@ -178,6 +178,26 @@ body {
   color: var(--text-main);
 }
 
+.toast {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', sans-serif;
+  animation: toast-fade-in 0.25s ease;
+}
+
+.toast-success {
+  background: #eef7ee;
+  border: 1px solid #c9e5c9;
+  color: #2f6b2f;
+}
+
+.toast-error {
+  background: #fdecec;
+  border: 1px solid #f2c5c5;
+  color: #a23434;
+}
+
 .summary-item {
   display: flex;
   justify-content: space-between;
@@ -255,6 +275,17 @@ body {
 
 .summary-button-secondary:hover:not(:disabled) {
   background: var(--page-accent);
+}
+
+@keyframes toast-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 640px) {

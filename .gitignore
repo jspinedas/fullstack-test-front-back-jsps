@@ -27,6 +27,7 @@ out/
 .env
 .env.local
 .env.*.local
+ignore
 
 # OS
 Thumbs.db
@@ -37,6 +38,7 @@ Thumbs.db
 /node_modules
 apps/web/node_modules
 .env
+.env.example
 *.log
 npm-debug.log
 yarn-error.log

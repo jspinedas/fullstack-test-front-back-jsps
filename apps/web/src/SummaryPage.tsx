@@ -2,7 +2,12 @@ import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import type { RootState, AppDispatch } from './store';
-import { setStep, beginPayment, resetPaymentIntent } from './store/paymentFlowSlice';
+import {
+  setStep,
+  resetPaymentFlow,
+  startCheckout,
+  confirmCheckout,
+} from './store/paymentFlowSlice';
 import { calculateTotals } from './utils/calculateTotals';
 import Backdrop from './components/Backdrop';
 
@@ -14,9 +19,13 @@ const SummaryPage: React.FC = () => {
   const { paymentData, deliveryData } = useSelector(
     (state: RootState) => state.checkout,
   );
-  const { paymentIntentStatus } = useSelector(
+  const { paymentIntentStatus, transactionId } = useSelector(
     (state: RootState) => state.paymentFlow,
   );
+  const [toast, setToast] = React.useState<
+    { type: 'success' | 'error'; message: string } | null
+  >(null);
+  const toastTimerRef = React.useRef<number | null>(null);
 
   const priceFormatter = new Intl.NumberFormat('es-CO', {
     style: 'currency',
@@ -30,13 +39,16 @@ const SummaryPage: React.FC = () => {
         <div className="product-shell">
           <div className="product-card product-state">
             <h2>Incomplete checkout</h2>
-            <p>Some required information is missing. Please go back to the product to continue.</p>
+            <p>
+              Some required information is missing. Please go back to the
+              product to continue.
+            </p>
             <button
               type="button"
               className="product-cta"
               onClick={() => {
                 navigate('/');
-                dispatch(resetPaymentIntent());
+                dispatch(resetPaymentFlow());
               }}
             >
               Back to product
@@ -49,15 +61,74 @@ const SummaryPage: React.FC = () => {
 
   const totals = calculateTotals(product.price);
 
-  const handlePay = () => {
-    dispatch(beginPayment());
-    setTimeout(() => {
-      dispatch(setStep('final'));
-    }, 2000);
+  const showToast = (type: 'success' | 'error', message: string) => {
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    setToast({ type, message });
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  };
+
+  React.useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handlePay = async () => {
+    try {
+      let txId = transactionId;
+
+      if (!txId) {
+        const startResult = await dispatch(
+          startCheckout({
+            productId: product.id,
+            deliveryData: {
+              fullName: deliveryData.fullName,
+              phone: deliveryData.phone,
+              address: deliveryData.address,
+              city: deliveryData.city,
+            },
+            baseFee: totals.baseFee,
+            deliveryFee: totals.deliveryFee,
+          }),
+        ).unwrap();
+        txId = startResult;
+      }
+
+      const confirmResult = await dispatch(
+        confirmCheckout({
+          transactionId: txId,
+          paymentData: {
+            cardNumber: paymentData.cardNumber.replace(/\s/g, ''),
+            cardExpMonth: paymentData.expMonth,
+            cardExpYear: paymentData.expYear,
+            cardCvc: paymentData.cvc,
+            cardHolder: paymentData.cardHolderName,
+          },
+        }),
+      ).unwrap();
+
+      if (confirmResult.status === 'SUCCESS') {
+        dispatch(setStep('final'));
+        showToast('success', 'Payment successful.');
+      } else if (confirmResult.status === 'PROCESSING') {
+        showToast('info', 'Payment is being processed. Please wait...');
+      } else {
+        showToast('error', 'Payment failed. Please try again.');
+      }
+    } catch (err) {
+      console.error('Payment error:', err);
+      showToast('error', 'Payment failed. Please try again.');
+    }
   };
 
   const handleBack = () => {
-    dispatch(resetPaymentIntent());
+    dispatch(resetPaymentFlow());
     navigate('/');
   };
 
@@ -66,6 +137,11 @@ const SummaryPage: React.FC = () => {
       <Backdrop>
         <div className="summary-content">
           <h2>Order Summary</h2>
+
+          {toast && (
+            <div className={`toast toast-${toast.type}`}>{toast.message}</div>
+          )}
+
           <div className="summary-item">
             <span className="summary-label">Product: {product.name}</span>
             <span className="summary-value">

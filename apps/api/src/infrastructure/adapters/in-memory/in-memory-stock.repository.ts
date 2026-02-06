@@ -1,4 +1,8 @@
-import { StockRepositoryPort } from '../../../application/ports/stock-repository.port';
+import {
+  StockRepositoryError,
+  StockRepositoryPort,
+} from '../../../application/ports/stock-repository.port';
+import { Err, Ok, Result } from '../../../application/use-cases/result';
 
 export class InMemoryStockRepository implements StockRepositoryPort {
   private readonly stockByProductId = new Map<string, number>([
@@ -11,5 +15,23 @@ export class InMemoryStockRepository implements StockRepositoryPort {
     }
 
     return this.stockByProductId.get(productId) ?? null;
+  }
+
+  async decrement(
+    productId: string,
+    by: number,
+  ): Promise<Result<void, StockRepositoryError>> {
+    const currentUnits = this.stockByProductId.get(productId);
+
+    if (currentUnits === undefined) {
+      return Err('PRODUCT_NOT_FOUND');
+    }
+
+    if (currentUnits < by) {
+      return Err('INSUFFICIENT_STOCK');
+    }
+
+    this.stockByProductId.set(productId, currentUnits - by);
+    return Ok(undefined);
   }
 }
