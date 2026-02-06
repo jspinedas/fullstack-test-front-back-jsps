@@ -485,29 +485,6 @@ npm run dev:web
 
 **Total**: 12 tests for checkout feature (45 existing + 12 new = 57 tests)
 
-### Created/Modified Files
-
-**Created**:
-- [apps/web/src/store/checkoutSlice.ts](apps/web/src/store/checkoutSlice.ts) - Redux slice
-- [apps/web/src/components/CheckoutModal.tsx](apps/web/src/components/CheckoutModal.tsx) - Modal component
-- [apps/web/src/components/CheckoutModal.css](apps/web/src/components/CheckoutModal.css) - Modal styles
-- [apps/web/src/utils/cardValidation.ts](apps/web/src/utils/cardValidation.ts) - Validation functions and detectCardBrand
-- [apps/web/src/__tests__/cardValidation.test.ts](apps/web/src/__tests__/cardValidation.test.ts) - Validation tests
-- [apps/web/src/__tests__/checkoutSlice.spec.ts](apps/web/src/__tests__/checkoutSlice.spec.ts) - Reducer tests
-- [apps/web/src/__tests__/CheckoutModal.test.tsx](apps/web/src/__tests__/CheckoutModal.test.tsx) - Component tests
-
-**Modified**:
-- [apps/web/src/store/index.ts](apps/web/src/store/index.ts) - Added checkoutReducer to store
-- [apps/web/src/ProductPage.tsx](apps/web/src/ProductPage.tsx) - Integrated button dispatch and modal rendering
-
-### Notes
-
-- No localStorage persistence
-- No backend calls to process payments
-- No integration with real payment providers
-- The modal is provider-agnostic: it stores data in Redux without provider knowledge
-- Ready for payment endpoint integration in a future feature
-
 ---
 
 ## � Feature: Summary & Backdrop
@@ -673,37 +650,6 @@ npm run dev:web
 - SummaryPage: 6 tests
 - **Total new**: 15 tests
 - **Total in suite**: 73 tests (57 existing + 15 new + 1 removed duplicate)
-
-### Created/Modified Files
-
-**Created**:
-- [apps/web/src/store/paymentFlowSlice.ts](apps/web/src/store/paymentFlowSlice.ts) - Redux slice for payment flow
-- [apps/web/src/utils/calculateTotals.ts](apps/web/src/utils/calculateTotals.ts) - Pure calculation function
-- [apps/web/src/components/Backdrop.tsx](apps/web/src/components/Backdrop.tsx) - Reusable Backdrop component
-- [apps/web/src/SummaryPage.tsx](apps/web/src/SummaryPage.tsx) - Summary page with route
-- [apps/web/src/__tests__/calculateTotals.test.ts](apps/web/src/__tests__/calculateTotals.test.ts) - Function tests
-- [apps/web/src/__tests__/paymentFlowSlice.spec.ts](apps/web/src/__tests__/paymentFlowSlice.spec.ts) - Reducer tests
-- [apps/web/src/__tests__/SummaryPage.test.tsx](apps/web/src/__tests__/SummaryPage.test.tsx) - Component tests
-
-**Modified**:
-- [apps/web/src/main.tsx](apps/web/src/main.tsx) - Added `<BrowserRouter>` wrapper
-- [apps/web/src/App.tsx](apps/web/src/App.tsx) - Added Routes and `/summary` route
-- [apps/web/src/store/index.ts](apps/web/src/store/index.ts) - Added paymentFlowReducer to store
-- [apps/web/src/components/CheckoutModal.tsx](apps/web/src/components/CheckoutModal.tsx) - Added navigation to `/summary` on data save
-- [apps/web/src/App.css](apps/web/src/App.css) - Added Backdrop and Summary styles
-- [apps/web/src/__tests__/App.test.tsx](apps/web/src/__tests__/App.test.tsx) - Updated to use BrowserRouter
-- [apps/web/src/__tests__/CheckoutModal.test.tsx](apps/web/src/__tests__/CheckoutModal.test.tsx) - Updated to use BrowserRouter
-- [apps/web/package.json](apps/web/package.json) - Added `react-router-dom` dependency
-
-### Notes
-
-- No actual payment processing
-- No transactionId generation
-- No localStorage persistence
-- Pure function `calculateTotals()` works independently of React/Redux
-- Backdrop component is generic and reusable for future modals/overlays
-- Step 'final' is placeholder; will be used for actual payment confirmation in future
-- Payment flow state persists in Redux (no persistence across page reloads by design)
 
 ---
 ## 💳 Feature: Payment Integration
@@ -1410,35 +1356,369 @@ npm run test --workspace=apps/web
 
 **Total tests**: 112 tests (98 existing + 14 new)
 
-### Created/Modified Files
+---
 
-**Created**:
-- [apps/web/src/utils/persistedState.ts](apps/web/src/utils/persistedState.ts) - Core persistence logic
-- [apps/web/src/__tests__/persistedState.test.ts](apps/web/src/__tests__/persistedState.test.ts) - Utility tests
-- [apps/web/src/__tests__/App.rehydration.test.tsx](apps/web/src/__tests__/App.rehydration.test.tsx) - Integration tests
+## 🚀 Feature: AWS Deploy (AWS CDK)
 
-**Modified**:
-- [apps/web/src/store/checkoutSlice.ts](apps/web/src/store/checkoutSlice.ts) - Added `paymentMeta`, `rehydrateCheckout`, safe last4 extraction
-- [apps/web/src/store/paymentFlowSlice.ts](apps/web/src/store/paymentFlowSlice.ts) - Added `rehydratePaymentFlow`
-- [apps/web/src/store/index.ts](apps/web/src/store/index.ts) - Store subscription with throttled persistence
-- [apps/web/src/App.tsx](apps/web/src/App.tsx) - Rehydration logic on mount, routing by step
-- [apps/web/src/ProductPage.tsx](apps/web/src/ProductPage.tsx) - Sets step to 'product' on mount
-- [apps/web/src/SummaryPage.tsx](apps/web/src/SummaryPage.tsx) - Handles missing payment details after refresh, displays masked card, alert UX
-- [apps/web/src/FinalStatusPage.tsx](apps/web/src/FinalStatusPage.tsx) - Clears persistence on SUCCESS/FAILED
-- [apps/web/src/components/CheckoutModal.tsx](apps/web/src/components/CheckoutModal.tsx) - Cancel clears persistence with productId option
-- [apps/web/src/App.css](apps/web/src/App.css) - Added `.summary-alert` styles
-- [apps/web/src/__tests__/checkoutSlice.spec.ts](apps/web/src/__tests__/checkoutSlice.spec.ts) - Updated tests for rehydration
-- [apps/web/src/__tests__/paymentFlowSlice.spec.ts](apps/web/src/__tests__/paymentFlowSlice.spec.ts) - Updated tests for rehydration
+### What It Does
 
-### Notes
+Implements Infrastructure as Code using AWS CDK to deploy a minimal, cost-optimized fullstack application on AWS with:
+- **Frontend**: React SPA hosted on S3 + CloudFront CDN
+- **Backend**: NestJS API served via Lambda + API Gateway HTTP API
+- **Database**: DynamoDB tables for transactions, products, stock, and deliveries
+- **Configuration**: SSM Parameter Store for sandbox credentials and environment variables
 
-- **No backend changes** in this feature
-- **No encryption** for localStorage (future improvement if needed)
-- **Production-ready**: Complies with PCI-DSS (no sensitive card data stored)
-- **Debounce (300ms)**: Prevents excessive localStorage writes
-- **Version control**: `version: 1` in JSON allows future schema migrations
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     CloudFront (CDN)                        │
+│  Serves frontend SPA with 403/404 → /index.html routing  │
+└──────────────────┬──────────────────────────────────────────┘
+                   │
+         ┌─────────┴──────────┐
+         │                    │
+    ┌────▼────┐          ┌───▼──────┐
+    │ S3      │          │API Gw    │
+    │Bucket   │          │HTTP API  │
+    └────┬────┘          └───┬──────┘
+         │                    │
+         │              ┌─────▼──────────┐
+         │              │  Lambda        │
+         │              │  (NestJS)      │
+         │              └─────┬──────────┘
+         │                    │
+         └─────────┬──────────┘
+                   │
+         ┌─────────▼──────────────────┐
+         │  DynamoDB Tables           │
+         │  ├─ transactions           │
+         │  ├─ products               │
+         │  ├─ stock                  │
+         │  └─ deliveries             │
+         └────────────────────────────┘
+
+         ┌──────────────────────────────┐
+         │ SSM Parameter Store          │
+         │ ├─ sandbox/baseUrl           │
+         │ ├─ sandbox/eventsKey         │
+         │ ├─ sandbox/integrityKey      │
+         │ ├─ sandbox/publicKey         │
+         │ └─ sandbox/privateKey        │
+         └──────────────────────────────┘
+```
+
+### Prerequisites
+
+1. **AWS Account** with permissions to:
+   - Create S3, CloudFront, Lambda, API Gateway, DynamoDB, IAM roles
+   - Use SSM Parameter Store
+
+2. **AWS CLI** installed and configured:
+   ```bash
+   # Install AWS CLI v2
+   # Windows: https://aws.amazon.com/cli/
+   # macOS: brew install awscli
+   # Linux: curl "https://..." | bash
+
+   # Configure credentials
+   aws configure
+
+   # Verify configuration
+   aws sts get-caller-identity
+   ```
+
+3. **CDK Toolkit** bootstrapped in your AWS region:
+   ```bash
+   # Opción 1: Usando npx (recomendado)
+   npx cdk bootstrap
+   
+   # Opción 2: Usando npm workspace
+   npm --workspace infra/cdk run cdk -- bootstrap
+   ```
+
+4. **Node.js** >= 18.0.0 and **npm** >= 9.0.0
+
+### Deployment Steps
+
+#### 1. Install Dependencies
+
+```bash
+cd /path/to/fullstack-test-front-back-jsps
+npm install
+```
+
+#### 2. Build Frontend SPA
+
+```bash
+npm run build:web
+```
+
+Output will be in `apps/web/dist/`
+
+#### 3. Build Backend for Lambda
+
+```bash
+npm run build:api
+```
+
+Output will be in `apps/api/dist/`
+
+#### 4. (Optional) Validate CDK Synthesis
+
+```bash
+npm --workspace infra/cdk run synth
+```
+
+This command generates a `cdk.out/` directory with CloudFormation templates. Useful for validation before deploying.
+
+#### 5. Deploy to AWS
+
+```bash
+npm --workspace infra/cdk run deploy
+```
+
+**What this does**:
+- Creates all AWS resources (S3, CloudFront, Lambda, API Gateway, DynamoDB, SSM)
+- Displays output URLs for frontend and API
+- Takes ~3–5 minutes
+
+**Example output**:
+```
+✓ FullstackMonorepoStack
+
+Outputs:
+FullstackMonorepoStack.FrontendUrl = https://d111111abcdef8.cloudfront.net
+FullstackMonorepoStack.ApiUrl = https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com
+FullstackMonorepoStack.TransactionsTableName = transactions
+FullstackMonorepoStack.ProductsTableName = products
+FullstackMonorepoStack.StockTableName = stock
+FullstackMonorepoStack.DeliveriesTableName = deliveries
+```
+
+### Configuration
+
+#### Set Sandbox Credentials
+
+After deployment, set the sandbox payment provider credentials via AWS CLI.
+
+**IMPORTANT**: All 5 parameters must be set with real values from your sandbox provider. The placeholders created during deployment are not functional.
+
+```bash
+# Set base URL
+aws ssm put-parameter \
+  --name "/fullstack-test/sandbox/baseUrl" \
+  --value "YOUR_SANDBOX_BASE_URL" \
+  --type "String" \
+  --overwrite
+
+# Set private key
+aws ssm put-parameter \
+  --name "/fullstack-test/sandbox/privateKey" \
+  --value "YOUR_SANDBOX_PRIVATE_KEY" \
+  --type "String" \
+  --overwrite
+
+# Set public key
+aws ssm put-parameter \
+  --name "/fullstack-test/sandbox/publicKey" \
+  --value "YOUR_SANDBOX_PUBLIC_KEY" \
+  --type "String" \
+  --overwrite
+
+# Set integrity key
+aws ssm put-parameter \
+  --name "/fullstack-test/sandbox/integrityKey" \
+  --value "YOUR_SANDBOX_INTEGRITY_KEY" \
+  --type "String" \
+  --overwrite
+
+# Set events key
+aws ssm put-parameter \
+  --name "/fullstack-test/sandbox/eventsKey" \
+  --value "YOUR_SANDBOX_EVENTS_KEY" \
+  --type "String" \
+  --overwrite
+```
+
+**Notes**:
+- Replace `YOUR_SANDBOX_*` with actual values from your `.env` file (never commit `.env` to Git)
+- Lambda automatically reads these values at runtime via SSM Parameter Store
+- To update a value, use the same command with `--overwrite`
+- Verify parameters: `aws ssm get-parameter --name "/fullstack-test/sandbox/baseUrl"`
+
+#### CORS Configuration
+
+CloudFront is configured to allow requests from the API Gateway. If you need to update CORS:
+
+1. Open `infra/cdk/lib/cdk-stack.ts`
+2. Find the `corsPreflight` section in the HTTP API resource
+3. Update the `allowOrigins` array (currently set to CloudFront domain)
+4. Redeploy: `npm --workspace infra/cdk run deploy`
+
+### Accessing Deployed Resources
+
+#### Frontend
+
+```bash
+# Get frontend URL from stack outputs
+aws cloudformation describe-stacks \
+  --stack-name FullstackMonorepoStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`FrontendUrl`].OutputValue' \
+  --output text
+
+# Open in browser
+# Example: https://d111111abcdef8.cloudfront.net
+```
+
+#### API
+
+```bash
+# Get API URL from stack outputs
+aws cloudformation describe-stacks \
+  --stack-name FullstackMonorepoStack \
+  --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
+  --output text
+
+# Test the endpoint
+curl https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/health
+```
+
+Expected response:
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-02-04T12:00:00.000Z"
+}
+```
+
+### Destroying Resources (Cleanup)
+
+**IMPORTANT**: To avoid unexpected AWS costs, always destroy resources when not in use.
+
+```bash
+npm --workspace infra/cdk run destroy
+```
+
+**What this does**:
+- Deletes all resources created by the stack
+- Empties and removes S3 bucket
+- Deletes DynamoDB tables
+- Removes Lambda functions, API Gateway, CloudFront distribution
+- Takes ~2–3 minutes
+
+**Verification** (ensure all resources are deleted):
+
+```bash
+# Check S3 buckets
+aws s3 ls
+
+# Check CloudFront distributions
+aws cloudfront list-distributions
+
+# Check DynamoDB tables
+aws dynamodb list-tables
+
+# Check Lambda functions
+aws lambda list-functions
+
+# Should all return empty or no resources related to this stack
+```
+
+### Cost Optimization
+
+This deployment uses cost-control strategies:
+
+| Resource | Configuration | Estimated Monthly Cost |
+|----------|---------------|------------------------|
+| S3 Bucket | 1 GB storage | $0.025 |
+| CloudFront | 10 GB outbound | $0.85 |
+| Lambda | 1M requests, 512 MB | $0.20 |
+| API Gateway HTTP | 1M requests | $0.60 |
+| DynamoDB | On-Demand (pay per request) | $0.00–$5.00 (varies) |
+| **Total (estimated)** | Minimal traffic | **< $10/month** |
+
+**Optimization tips**:
+- DynamoDB uses **On-Demand** billing (no capacity provisioning)
+- API Gateway uses **HTTP API** (cheaper than REST API)
+- CloudFront caches static assets (reduces S3 requests)
+- Lambda timeout set to 30 seconds (adjust if needed)
+- No NAT Gateway (no egress traffic costs)
+- No RDS, ElastiCache, or other managed services
+
+### Troubleshooting
+
+#### Error: "Stack with id FullstackMonorepoStack already exists"
+
+The stack already exists. Either:
+- Destroy it first: `npm --workspace infra/cdk run destroy`
+- Or update with: `npm --workspace infra/cdk run deploy`
+
+#### Error: "User is not authorized to perform: lambda:CreateFunction"
+
+Your AWS credentials lack permissions. Ensure IAM user has `AdministratorAccess` or equivalent policies.
+
+#### Error: "Bucket already exists"
+
+Bucket names must be globally unique in AWS. Modify [infra/cdk/lib/cdk-stack.ts](infra/cdk/lib/cdk-stack.ts) to use a unique bucket name:
+
+```typescript
+// Change this line:
+bucketName: `${appName}-frontend-${this.account}-${this.region}`,
+
+// To something unique (e.g., with a timestamp or random string)
+bucketName: `${appName}-frontend-${Date.now()}-${this.region}`,
+```
+
+Then redeploy.
+
+#### Frontend shows 403 or 404 error
+
+Verify CloudFront distribution is correctly configured:
+```bash
+# Check CloudFront status
+aws cloudfront get-distribution-config --id <DISTRIBUTION_ID>
+```
+
+Ensure the error responses route 403/404 to `/index.html` for SPA routing.
+
+#### API returns 502 Bad Gateway
+
+Lambda function may have issues. Check logs:
+```bash
+aws logs tail /aws/lambda/fullstack-test-api --follow
+```
+
+Verify Lambda handler path matches: `src/lambda-handler.handler` (handler file is in dist/src/ folder after TypeScript compilation)
+
+### Testing
+
+Run CDK stack smoke tests:
+
+```bash
+npm run test --workspace infra/cdk
+```
+
+Expected output:
+```
+PASS  __tests__/cdk-stack.spec.ts
+  CdkStack
+    ✓ should create S3 bucket for frontend
+    ✓ should create CloudFront distribution
+    ✓ should create DynamoDB tables
+    ✓ should create Lambda function
+    ✓ should create API Gateway HTTP API
+    ✓ should have outputs for frontend and API URLs
+```
+
+Run backend smoke test:
+
+```bash
+npm run test --workspace apps/api
+```
 
 ---
+
 ## Testing & Coverage
 
 ### Commands
@@ -1482,5 +1762,3 @@ npm install
 cd .\fullstack-test-front-back-jsps
 npm run test
 ```
-
----
