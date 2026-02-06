@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProductById } from './store/productSlice';
 import { openCheckoutModal } from './store/checkoutSlice';
+import { setStep } from './store/paymentFlowSlice';
 import CheckoutModal from './components/CheckoutModal';
 import type { RootState, AppDispatch } from './store';
 
@@ -19,6 +20,10 @@ const ProductPage: React.FC = () => {
     currency: 'COP',
     maximumFractionDigits: 0,
   });
+
+  useEffect(() => {
+    dispatch(setStep('product'));
+  }, [dispatch]);
 
   useEffect(() => {
     if (status === 'idle') {

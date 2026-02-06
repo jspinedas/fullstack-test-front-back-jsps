@@ -8,6 +8,7 @@ import {
   startCheckout,
   confirmCheckout,
 } from './store/paymentFlowSlice';
+import { openCheckoutModal } from './store/checkoutSlice';
 import { calculateTotals } from './utils/calculateTotals';
 import Backdrop from './components/Backdrop';
 
@@ -16,7 +17,7 @@ const SummaryPage: React.FC = () => {
   const navigate = useNavigate();
 
   const product = useSelector((state: RootState) => state.product.data);
-  const { paymentData, deliveryData } = useSelector(
+  const { paymentData, deliveryData, paymentMeta } = useSelector(
     (state: RootState) => state.checkout,
   );
   const { paymentIntentStatus, transactionId } = useSelector(
@@ -33,7 +34,36 @@ const SummaryPage: React.FC = () => {
     maximumFractionDigits: 0,
   });
 
-  if (!product || !paymentData || !deliveryData) {
+  React.useEffect(() => {
+    dispatch(setStep('summary'));
+  }, [dispatch]);
+
+  React.useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
+  const hasPaymentDetails = Boolean(paymentData?.cardNumber && paymentData.cvc);
+  const maskedCard = paymentMeta
+    ? paymentMeta.last4
+      ? `${paymentMeta.brand} **** ${paymentMeta.last4}`
+      : paymentMeta.brand
+    : null;
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    setToast({ type, message });
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  };
+
+  if (!product || !deliveryData) {
     return (
       <div className="app">
         <div className="product-shell">
@@ -61,25 +91,12 @@ const SummaryPage: React.FC = () => {
 
   const totals = calculateTotals(product.price);
 
-  const showToast = (type: 'success' | 'error', message: string) => {
-    if (toastTimerRef.current) {
-      window.clearTimeout(toastTimerRef.current);
-    }
-    setToast({ type, message });
-    toastTimerRef.current = window.setTimeout(() => {
-      setToast(null);
-    }, 3000);
-  };
-
-  React.useEffect(() => {
-    return () => {
-      if (toastTimerRef.current) {
-        window.clearTimeout(toastTimerRef.current);
-      }
-    };
-  }, []);
-
   const handlePay = async () => {
+    if (!hasPaymentDetails || !paymentData) {
+      showToast('error', 'Payment details are missing. Please re-enter them.');
+      return;
+    }
+
     try {
       let txId = transactionId;
 
@@ -119,6 +136,7 @@ const SummaryPage: React.FC = () => {
       } else if (confirmResult.status === 'PROCESSING') {
         showToast('info', 'Payment is being processed. Please wait...');
       } else {
+        dispatch(setStep('final'));
         navigate(`/final/${txId}`);
       }
     } catch (err) {
@@ -132,6 +150,12 @@ const SummaryPage: React.FC = () => {
     navigate('/');
   };
 
+  const handleReenterPayment = () => {
+    dispatch(setStep('checkout'));
+    dispatch(openCheckoutModal());
+    navigate('/');
+  };
+
   return (
     <div className="app">
       <Backdrop>
@@ -142,12 +166,34 @@ const SummaryPage: React.FC = () => {
             <div className={`toast toast-${toast.type}`}>{toast.message}</div>
           )}
 
+          {!hasPaymentDetails && (
+            <div className="summary-alert">
+              <p>
+                Payment details are not available after refresh. Please re-enter
+                your card information to continue.
+              </p>
+              <button
+                type="button"
+                className="summary-button summary-button-secondary"
+                onClick={handleReenterPayment}
+              >
+                Re-enter payment details
+              </button>
+            </div>
+          )}
+
           <div className="summary-item">
             <span className="summary-label">Product: {product.name}</span>
             <span className="summary-value">
               {priceFormatter.format(totals.productAmount)}
             </span>
           </div>
+          {maskedCard && (
+            <div className="summary-item">
+              <span className="summary-label">Card</span>
+              <span className="summary-value">{maskedCard}</span>
+            </div>
+          )}
           <div className="summary-item">
             <span className="summary-label">Base Fee</span>
             <span className="summary-value">
@@ -180,7 +226,7 @@ const SummaryPage: React.FC = () => {
               type="button"
               className="summary-button summary-button-primary"
               onClick={handlePay}
-              disabled={paymentIntentStatus === 'processing'}
+              disabled={paymentIntentStatus === 'processing' || !hasPaymentDetails}
             >
               {paymentIntentStatus === 'processing'
                 ? 'Processing...'

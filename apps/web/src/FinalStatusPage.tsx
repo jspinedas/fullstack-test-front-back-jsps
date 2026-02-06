@@ -7,7 +7,8 @@ import {
   resetTransactionStatus,
 } from './store/transactionStatusSlice';
 import { fetchProductById } from './store/productSlice';
-import { resetPaymentFlow } from './store/paymentFlowSlice';
+import { resetPaymentFlow, setStep } from './store/paymentFlowSlice';
+import { clearPersistedState } from './utils/persistedState';
 import Backdrop from './components/Backdrop';
 
 const FinalStatusPage: React.FC = () => {
@@ -27,12 +28,23 @@ const FinalStatusPage: React.FC = () => {
   });
 
   useEffect(() => {
+    dispatch(setStep('final'));
+  }, [dispatch]);
+
+  useEffect(() => {
     if (transactionId) {
       dispatch(fetchTransactionStatus(transactionId));
     }
   }, [dispatch, transactionId]);
 
+  useEffect(() => {
+    if (status === 'SUCCESS' || status === 'FAILED') {
+      clearPersistedState();
+    }
+  }, [status]);
+
   const handleBackToProduct = async () => {
+    clearPersistedState();
     dispatch(resetTransactionStatus());
     dispatch(resetPaymentFlow());
     navigate('/');
