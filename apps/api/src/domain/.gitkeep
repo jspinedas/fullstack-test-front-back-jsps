@@ -1,0 +1,8 @@
+# Domain Layer
+
+Esta carpeta contiene las entidades del dominio y reglas de negocio puras.
+
+**Reglas:**
+- Sin dependencias de frameworks
+- Lógica de negocio agnóstica a infraestructura
+- No usar nombres de proveedores externos
