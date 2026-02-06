@@ -1,4 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { API_BASE_URL } from '../config';
 
 type Product = {
   id: string;
@@ -25,7 +26,7 @@ export const fetchProductById = createAsyncThunk<
   string,
   { rejectValue: string }
 >('product/fetchById', async (productId, { rejectWithValue }) => {
-  const response = await fetch(`/products/${productId}`);
+  const response = await fetch(`${API_BASE_URL}/products/${productId}`);
 
   if (!response.ok) {
     let message = 'Product not found';

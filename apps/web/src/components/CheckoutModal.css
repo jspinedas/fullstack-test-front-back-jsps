@@ -115,6 +115,10 @@
   transition: border-color 0.2s ease;
 }
 
+.checkout-row .checkout-input {
+  text-align: center;
+}
+
 .checkout-input:focus {
   outline: none;
   border-color: var(--accent);
@@ -155,8 +159,9 @@
 
 .checkout-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 70px 100px 100px;
   gap: 12px;
+  align-items: start;
 }
 
 .checkout-modal-footer {

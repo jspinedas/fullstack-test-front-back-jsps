@@ -18,6 +18,7 @@
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
     "typeRoots": ["./node_modules/@types"],
+    "types": ["jest", "node"],
     "esModuleInterop": true,
     "resolveJsonModule": true
   },

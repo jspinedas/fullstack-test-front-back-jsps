@@ -3,15 +3,23 @@ import {
   Get,
   HttpException,
   HttpStatus,
+  Inject,
   Param,
 } from '@nestjs/common';
 import { GetTransactionStatusUseCase } from '../../application/use-cases/get-transaction-status.use-case';
+import { TransactionsRepositoryPort } from '../../application/ports/transactions-repository.port';
 
 @Controller('transactions')
 export class TransactionsController {
+  private readonly getTransactionStatusUseCase: GetTransactionStatusUseCase;
+
   constructor(
-    private readonly getTransactionStatusUseCase: GetTransactionStatusUseCase,
-  ) {}
+    @Inject('TRANSACTIONS_REPOSITORY') transactionsRepository: TransactionsRepositoryPort,
+  ) {
+    this.getTransactionStatusUseCase = new GetTransactionStatusUseCase(
+      transactionsRepository,
+    );
+  }
 
   @Get(':id')
   async getById(@Param('id') id: string) {

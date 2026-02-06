@@ -28,6 +28,8 @@ out/
 .env.local
 .env.*.local
 ignore
+payload.json
+response.json
 
 # OS
 Thumbs.db
@@ -52,9 +54,3 @@ cdk.out/
 # Vite
 .vite/
 
-# Redux DevTools
-.redux-devtools
-
-# Temporary
-.tmp/
-temp/
