@@ -41,4 +41,15 @@ describe('ProductsController', () => {
 
     expect(result).toEqual(payload);
   });
+
+  it('throws not found when product is missing', async () => {
+    jest.spyOn(useCase, 'execute').mockResolvedValue({
+      ok: false,
+      error: 'PRODUCT_NOT_FOUND',
+    });
+
+    await expect(controller.getById('missing')).rejects.toThrow(
+      'Product not found',
+    );
+  });
 });

@@ -47,4 +47,88 @@ describe('ProductPage', () => {
     expect(await screen.findByText('Demo Product')).toBeInTheDocument();
     expect(screen.getByText('Pay with credit card')).toBeInTheDocument();
   });
+
+  it('renders loading state', () => {
+    const appSlice = createSlice({
+      name: 'app',
+      initialState: { initialized: true },
+      reducers: {},
+    });
+
+    const store = configureStore({
+      reducer: {
+        app: appSlice.reducer,
+        product: productReducer,
+        checkout: checkoutReducer,
+      },
+      preloadedState: {
+        product: { data: null, status: 'loading', error: null },
+        checkout: { paymentData: null, paymentMeta: null, deliveryData: null, ui: { isCheckoutModalOpen: false } },
+      },
+    });
+
+    render(
+      <Provider store={store}>
+        <ProductPage />
+      </Provider>,
+    );
+
+    expect(screen.getByText('Loading product...')).toBeInTheDocument();
+  });
+
+  it('renders error state', () => {
+    const appSlice = createSlice({
+      name: 'app',
+      initialState: { initialized: true },
+      reducers: {},
+    });
+
+    const store = configureStore({
+      reducer: {
+        app: appSlice.reducer,
+        product: productReducer,
+        checkout: checkoutReducer,
+      },
+      preloadedState: {
+        product: { data: null, status: 'failed', error: 'Error loading product' },
+        checkout: { paymentData: null, paymentMeta: null, deliveryData: null, ui: { isCheckoutModalOpen: false } },
+      },
+    });
+
+    render(
+      <Provider store={store}>
+        <ProductPage />
+      </Provider>,
+    );
+
+    expect(screen.getByText('Error loading product')).toBeInTheDocument();
+  });
+
+  it('renders empty state when product is missing', () => {
+    const appSlice = createSlice({
+      name: 'app',
+      initialState: { initialized: true },
+      reducers: {},
+    });
+
+    const store = configureStore({
+      reducer: {
+        app: appSlice.reducer,
+        product: productReducer,
+        checkout: checkoutReducer,
+      },
+      preloadedState: {
+        product: { data: null, status: 'succeeded', error: null },
+        checkout: { paymentData: null, paymentMeta: null, deliveryData: null, ui: { isCheckoutModalOpen: false } },
+      },
+    });
+
+    render(
+      <Provider store={store}>
+        <ProductPage />
+      </Provider>,
+    );
+
+    expect(screen.getByText('No product available')).toBeInTheDocument();
+  });
 });

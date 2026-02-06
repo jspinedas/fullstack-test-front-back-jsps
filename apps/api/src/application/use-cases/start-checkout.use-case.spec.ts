@@ -111,4 +111,34 @@ describe('StartCheckoutUseCase', () => {
 
     expect(result).toEqual({ ok: false, error: 'INSUFFICIENT_STOCK' });
   });
+
+  it('should return error when transaction creation fails', async () => {
+    const product: Product = {
+      id: 'product-1',
+      name: 'Test Product',
+      description: 'Test Description',
+      price: 100000,
+    };
+
+    productRepository.getById.mockResolvedValue(product);
+    stockRepository.getUnits.mockResolvedValue(10);
+    transactionsRepository.createPending.mockImplementation(async () => ({
+      ok: false,
+      error: 'DATABASE_ERROR',
+    }));
+
+    const result = await useCase.execute({
+      productId: 'product-1',
+      deliveryInfo: {
+        fullName: 'John Doe',
+        phone: '1234567890',
+        address: '123 Main St',
+        city: 'City',
+      },
+      baseFee: 5000,
+      deliveryFee: 3000,
+    });
+
+    expect(result).toEqual({ ok: false, error: 'DATABASE_ERROR' });
+  });
 });

@@ -50,4 +50,23 @@ describe('GetProductByIdUseCase', () => {
 
     expect(result).toEqual({ ok: false, error: 'PRODUCT_NOT_FOUND' });
   });
+
+  it('returns not found when stock is missing', async () => {
+    const productRepository: ProductRepositoryPort = {
+      getById: jest.fn().mockResolvedValue(product),
+    };
+    const stockRepository: StockRepositoryPort = {
+      getUnits: jest.fn().mockResolvedValue(null),
+      decrement: jest.fn(),
+    };
+
+    const useCase = new GetProductByIdUseCase(
+      productRepository,
+      stockRepository,
+    );
+
+    const result = await useCase.execute('product-1');
+
+    expect(result).toEqual({ ok: false, error: 'PRODUCT_NOT_FOUND' });
+  });
 });
