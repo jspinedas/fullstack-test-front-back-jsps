@@ -3,6 +3,7 @@ import productReducer from './productSlice';
 import checkoutReducer from './checkoutSlice';
 import paymentFlowReducer from './paymentFlowSlice';
 import transactionStatusReducer from './transactionStatusSlice';
+import { savePersistedState } from '../utils/persistedState';
 
 const appSlice = createSlice({
   name: 'app',
@@ -18,6 +19,18 @@ export const store = configureStore({
     paymentFlow: paymentFlowReducer,
     transactionStatus: transactionStatusReducer,
   },
+});
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+store.subscribe(() => {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+  }
+
+  saveTimer = setTimeout(() => {
+    savePersistedState(store.getState());
+  }, 300);
 });
 
 export type RootState = ReturnType<typeof store.getState>;

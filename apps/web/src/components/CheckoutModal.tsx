@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
+import React, { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
   saveCheckoutData,
   closeCheckoutModal,
+  clearCheckoutData,
 } from '../store/checkoutSlice';
 import { setStep } from '../store/paymentFlowSlice';
+import { clearPersistedState } from '../utils/persistedState';
 import {
   validateCardNumber,
   validateExpMonth,
@@ -156,7 +158,9 @@ const CheckoutModal: React.FC = () => {
   };
 
   const handleCancel = () => {
+    dispatch(clearCheckoutData());
     dispatch(closeCheckoutModal());
+    clearPersistedState({ keepProductId: 'product-1' });
     setCardNumber('');
     setExpMonth('');
     setExpYear('');
