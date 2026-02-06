@@ -198,6 +198,24 @@ body {
   color: #a23434;
 }
 
+.summary-alert {
+  background: rgba(184, 107, 58, 0.08);
+  border: 1px solid rgba(184, 107, 58, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', sans-serif;
+}
+
+.summary-alert p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
 .summary-item {
   display: flex;
   justify-content: space-between;
