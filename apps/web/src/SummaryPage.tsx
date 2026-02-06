@@ -115,11 +115,11 @@ const SummaryPage: React.FC = () => {
 
       if (confirmResult.status === 'SUCCESS') {
         dispatch(setStep('final'));
-        showToast('success', 'Payment successful.');
+        navigate(`/final/${txId}`);
       } else if (confirmResult.status === 'PROCESSING') {
         showToast('info', 'Payment is being processed. Please wait...');
       } else {
-        showToast('error', 'Payment failed. Please try again.');
+        navigate(`/final/${txId}`);
       }
     } catch (err) {
       console.error('Payment error:', err);
