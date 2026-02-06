@@ -16,6 +16,7 @@ describe('GetProductByIdUseCase', () => {
     };
     const stockRepository: StockRepositoryPort = {
       getUnits: jest.fn().mockResolvedValue(10),
+      decrement: jest.fn(),
     };
 
     const useCase = new GetProductByIdUseCase(
@@ -37,6 +38,7 @@ describe('GetProductByIdUseCase', () => {
     };
     const stockRepository: StockRepositoryPort = {
       getUnits: jest.fn().mockResolvedValue(10),
+      decrement: jest.fn(),
     };
 
     const useCase = new GetProductByIdUseCase(

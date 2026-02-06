@@ -1,5 +1,5 @@
-export const BASE_FEE = 1500; // cents (in COP = 15 pesos)
-export const DELIVERY_FEE = 5000; // cents (in COP = 50 pesos)
+export const BASE_FEE = 1500;
+export const DELIVERY_FEE = 5000;
 
 export interface Totals {
   productAmount: number;
