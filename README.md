@@ -1149,6 +1149,62 @@ Future features will add:
 - Security enhancements
 
 ---
+## Feature: Final Status
+
+### What It Does
+
+Shows the final transaction status by calling the backend and lets the user return to the product page with refreshed stock.
+
+### Route
+
+- `GET /final/:transactionId` (frontend)
+
+### Data Displayed
+
+- Status: `SUCCESS` | `FAILED` | `PENDING`
+- Total (if returned by backend)
+- Failure reason (only when FAILED)
+- Transaction ID
+
+### Behavior
+
+- Loads status from `GET /transactions/:id` on page load
+- Shows loading and error states without breaking the flow
+- **SUCCESS**: shows "Payment successful" and "Back to product" button
+- **FAILED**: shows "Payment failed", optional reason, and "Back to product" button
+- **PENDING**: shows "Processing" and a "Refresh status" button
+- On "Back to product": navigates to `/` and refreshes product stock via `fetchProductById(productId)`
+
+### Local Testing
+
+1. Start backend and frontend:
+```bash
+npm run dev:api
+npm run dev:web
+```
+2. Complete the payment flow to reach `/summary`
+3. Click "Pay" to trigger payment confirmation
+4. App navigates to `/final/:transactionId`
+5. Verify:
+   - Status and transaction data are displayed
+   - "Back to product" returns to `/` and updates stock
+   - If status is PENDING, "Refresh status" re-fetches status
+
+### Tests and Commands
+
+**Frontend** — Run: `npm run test --workspace=apps/web`
+
+- `transactionStatusSlice.spec.ts`:
+  - pending/fulfilled/rejected states for `fetchTransactionStatus`
+  - reset action clears state
+- `FinalStatusPage.test.tsx`:
+  - loading render
+  - SUCCESS render
+  - FAILED render with reason
+  - PENDING render with refresh button
+  - back button triggers navigation
+
+---
 ## �🛠 Troubleshooting
 
 ### Port already in use
