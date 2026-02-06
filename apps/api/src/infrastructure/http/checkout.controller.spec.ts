@@ -4,38 +4,57 @@ import { StartCheckoutUseCase } from '../../application/use-cases/start-checkout
 import { ConfirmCheckoutUseCase } from '../../application/use-cases/confirm-checkout.use-case';
 import { Ok, Err } from '../../application/use-cases/result';
 import { Transaction } from '../../domain/transaction';
+import { ProductRepositoryPort } from '../../application/ports/product-repository.port';
+import { StockRepositoryPort } from '../../application/ports/stock-repository.port';
+import { TransactionsRepositoryPort } from '../../application/ports/transactions-repository.port';
+import { DeliveriesRepositoryPort } from '../../application/ports/deliveries-repository.port';
 
 describe('CheckoutController', () => {
   let controller: CheckoutController;
-  let startCheckoutUseCase: jest.Mocked<StartCheckoutUseCase>;
-  let confirmCheckoutUseCase: jest.Mocked<ConfirmCheckoutUseCase>;
+  let startCheckoutExecute: jest.SpyInstance;
+  let confirmCheckoutExecute: jest.SpyInstance;
 
   beforeEach(async () => {
-    const mockStartCheckoutUseCase = {
-      execute: jest.fn(),
-    };
-
-    const mockConfirmCheckoutUseCase = {
-      execute: jest.fn(),
-    };
+    const mockProductRepository = {} as ProductRepositoryPort;
+    const mockStockRepository = {} as StockRepositoryPort;
+    const mockTransactionsRepository = {} as TransactionsRepositoryPort;
+    const mockDeliveriesRepository = {} as DeliveriesRepositoryPort;
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CheckoutController],
       providers: [
         {
-          provide: StartCheckoutUseCase,
-          useValue: mockStartCheckoutUseCase,
+          provide: 'PRODUCT_REPOSITORY',
+          useValue: mockProductRepository,
         },
         {
-          provide: ConfirmCheckoutUseCase,
-          useValue: mockConfirmCheckoutUseCase,
+          provide: 'STOCK_REPOSITORY',
+          useValue: mockStockRepository,
+        },
+        {
+          provide: 'TRANSACTIONS_REPOSITORY',
+          useValue: mockTransactionsRepository,
+        },
+        {
+          provide: 'DELIVERIES_REPOSITORY',
+          useValue: mockDeliveriesRepository,
         },
       ],
     }).compile();
 
     controller = module.get<CheckoutController>(CheckoutController);
-    startCheckoutUseCase = module.get(StartCheckoutUseCase);
-    confirmCheckoutUseCase = module.get(ConfirmCheckoutUseCase);
+    startCheckoutExecute = jest.spyOn(
+      StartCheckoutUseCase.prototype,
+      'execute',
+    );
+    confirmCheckoutExecute = jest.spyOn(
+      ConfirmCheckoutUseCase.prototype,
+      'execute',
+    );
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -44,7 +63,7 @@ describe('CheckoutController', () => {
 
   describe('start', () => {
     it('should return transaction id on success', async () => {
-      startCheckoutUseCase.execute.mockResolvedValue(
+      startCheckoutExecute.mockResolvedValue(
         Ok({ transactionId: 'tx-123' }),
       );
 
@@ -64,7 +83,7 @@ describe('CheckoutController', () => {
     });
 
     it('should throw exception on product not found', async () => {
-      startCheckoutUseCase.execute.mockResolvedValue(
+      startCheckoutExecute.mockResolvedValue(
         Err('PRODUCT_NOT_FOUND'),
       );
 
@@ -84,7 +103,7 @@ describe('CheckoutController', () => {
     });
 
     it('should throw exception on insufficient stock', async () => {
-      startCheckoutUseCase.execute.mockResolvedValue(
+      startCheckoutExecute.mockResolvedValue(
         Err('INSUFFICIENT_STOCK'),
       );
 
@@ -104,7 +123,7 @@ describe('CheckoutController', () => {
     });
 
     it('should throw exception on database error', async () => {
-      startCheckoutUseCase.execute.mockResolvedValue(
+      startCheckoutExecute.mockResolvedValue(
         Err('DATABASE_ERROR'),
       );
 
@@ -146,7 +165,7 @@ describe('CheckoutController', () => {
         },
       };
 
-      confirmCheckoutUseCase.execute.mockResolvedValue(Ok({ transaction }));
+      confirmCheckoutExecute.mockResolvedValue(Ok({ transaction }));
 
       const result = await controller.confirm({
         transactionId: 'tx-123',
@@ -165,7 +184,7 @@ describe('CheckoutController', () => {
     });
 
     it('should throw exception on transaction not found', async () => {
-      confirmCheckoutUseCase.execute.mockResolvedValue(
+      confirmCheckoutExecute.mockResolvedValue(
         Err('TRANSACTION_NOT_FOUND'),
       );
 
@@ -184,7 +203,7 @@ describe('CheckoutController', () => {
     });
 
     it('should throw exception on insufficient stock', async () => {
-      confirmCheckoutUseCase.execute.mockResolvedValue(
+      confirmCheckoutExecute.mockResolvedValue(
         Err('INSUFFICIENT_STOCK'),
       );
 
@@ -203,7 +222,7 @@ describe('CheckoutController', () => {
     });
 
     it('should throw exception on database error', async () => {
-      confirmCheckoutUseCase.execute.mockResolvedValue(
+      confirmCheckoutExecute.mockResolvedValue(
         Err('DATABASE_ERROR'),
       );
 
@@ -243,7 +262,7 @@ describe('CheckoutController', () => {
         },
       };
 
-      confirmCheckoutUseCase.execute.mockResolvedValue(Ok({ transaction }));
+      confirmCheckoutExecute.mockResolvedValue(Ok({ transaction }));
 
       const result = await controller.confirm({
         transactionId: 'tx-124',
