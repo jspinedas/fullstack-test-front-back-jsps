@@ -82,6 +82,46 @@ describe('CheckoutController', () => {
         }),
       ).rejects.toThrow('Product not found');
     });
+
+    it('should throw exception on insufficient stock', async () => {
+      startCheckoutUseCase.execute.mockResolvedValue(
+        Err('INSUFFICIENT_STOCK'),
+      );
+
+      await expect(
+        controller.start({
+          productId: 'product-1',
+          deliveryData: {
+            fullName: 'John Doe',
+            phone: '1234567890',
+            address: '123 Main St',
+            city: 'City',
+          },
+          baseFee: 5000,
+          deliveryFee: 3000,
+        }),
+      ).rejects.toThrow('Insufficient stock');
+    });
+
+    it('should throw exception on database error', async () => {
+      startCheckoutUseCase.execute.mockResolvedValue(
+        Err('DATABASE_ERROR'),
+      );
+
+      await expect(
+        controller.start({
+          productId: 'product-1',
+          deliveryData: {
+            fullName: 'John Doe',
+            phone: '1234567890',
+            address: '123 Main St',
+            city: 'City',
+          },
+          baseFee: 5000,
+          deliveryFee: 3000,
+        }),
+      ).rejects.toThrow('Internal server error');
+    });
   });
 
   describe('confirm', () => {
@@ -141,6 +181,83 @@ describe('CheckoutController', () => {
           },
         }),
       ).rejects.toThrow('Transaction not found');
+    });
+
+    it('should throw exception on insufficient stock', async () => {
+      confirmCheckoutUseCase.execute.mockResolvedValue(
+        Err('INSUFFICIENT_STOCK'),
+      );
+
+      await expect(
+        controller.confirm({
+          transactionId: 'tx-123',
+          paymentData: {
+            cardNumber: '4242424242424242',
+            cardExpMonth: '12',
+            cardExpYear: '25',
+            cardCvc: '123',
+            cardHolder: 'John Doe',
+          },
+        }),
+      ).rejects.toThrow('Insufficient stock');
+    });
+
+    it('should throw exception on database error', async () => {
+      confirmCheckoutUseCase.execute.mockResolvedValue(
+        Err('DATABASE_ERROR'),
+      );
+
+      await expect(
+        controller.confirm({
+          transactionId: 'tx-123',
+          paymentData: {
+            cardNumber: '4242424242424242',
+            cardExpMonth: '12',
+            cardExpYear: '25',
+            cardCvc: '123',
+            cardHolder: 'John Doe',
+          },
+        }),
+      ).rejects.toThrow('Internal server error');
+    });
+
+    it('should return failed message when payment fails', async () => {
+      const transaction: Transaction = {
+        id: 'tx-124',
+        productId: 'product-1',
+        status: 'FAILED',
+        amount: 100000,
+        baseFee: 5000,
+        deliveryFee: 3000,
+        total: 108000,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        provider: 'PAYMENT_PROVIDER',
+        providerTransactionId: 'provider-tx-2',
+        failureReason: 'Card declined',
+        customer: {
+          fullName: 'John Doe',
+          phone: '1234567890',
+          address: '123 Main St',
+          city: 'City',
+        },
+      };
+
+      confirmCheckoutUseCase.execute.mockResolvedValue(Ok({ transaction }));
+
+      const result = await controller.confirm({
+        transactionId: 'tx-124',
+        paymentData: {
+          cardNumber: '4242424242424242',
+          cardExpMonth: '12',
+          cardExpYear: '25',
+          cardCvc: '123',
+          cardHolder: 'John Doe',
+        },
+      });
+
+      expect(result.status).toBe('FAILED');
+      expect(result.message).toBe('Payment failed');
     });
   });
 });

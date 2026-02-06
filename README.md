@@ -1439,6 +1439,30 @@ npm run test --workspace=apps/web
 - **Version control**: `version: 1` in JSON allows future schema migrations
 
 ---
+## Testing & Coverage
+
+### Commands
+
+Run all tests:
+```bash
+npm run test
+```
+
+Run tests with coverage:
+```bash
+npm run test:cov
+```
+
+### Coverage Summary
+
+- Frontend (Jest): Lines 85.67%, Branches 80.69%
+- Backend (Jest): Lines 96.98%, Branches 81.66%
+
+### Scope Note
+
+Unit tests (Jest) with mocks, no real AWS calls.
+
+---
 ## �🛠 Troubleshooting
 
 ### Port already in use
