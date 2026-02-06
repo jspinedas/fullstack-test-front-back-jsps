@@ -1,26 +1,37 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProductsController } from './products.controller';
 import { GetProductByIdUseCase } from '../../application/use-cases/get-product-by-id.use-case';
+import { ProductRepositoryPort } from '../../application/ports/product-repository.port';
+import { StockRepositoryPort } from '../../application/ports/stock-repository.port';
 
 describe('ProductsController', () => {
   let controller: ProductsController;
-  let useCase: GetProductByIdUseCase;
+  let executeSpy: jest.SpyInstance;
 
   beforeEach(async () => {
+    const mockProductRepository = {} as ProductRepositoryPort;
+    const mockStockRepository = {} as StockRepositoryPort;
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductsController],
       providers: [
         {
-          provide: GetProductByIdUseCase,
-          useValue: {
-            execute: jest.fn(),
-          },
+          provide: 'PRODUCT_REPOSITORY',
+          useValue: mockProductRepository,
+        },
+        {
+          provide: 'STOCK_REPOSITORY',
+          useValue: mockStockRepository,
         },
       ],
     }).compile();
 
     controller = module.get<ProductsController>(ProductsController);
-    useCase = module.get<GetProductByIdUseCase>(GetProductByIdUseCase);
+    executeSpy = jest.spyOn(GetProductByIdUseCase.prototype, 'execute');
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('returns product payload on success', async () => {
@@ -32,7 +43,7 @@ describe('ProductsController', () => {
       stock: 10,
     };
 
-    jest.spyOn(useCase, 'execute').mockResolvedValue({
+    executeSpy.mockResolvedValue({
       ok: true,
       value: payload,
     });
@@ -43,7 +54,7 @@ describe('ProductsController', () => {
   });
 
   it('throws not found when product is missing', async () => {
-    jest.spyOn(useCase, 'execute').mockResolvedValue({
+    executeSpy.mockResolvedValue({
       ok: false,
       error: 'PRODUCT_NOT_FOUND',
     });

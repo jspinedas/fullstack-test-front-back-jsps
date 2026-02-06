@@ -3,26 +3,34 @@ import { TransactionsController } from './transactions.controller';
 import { GetTransactionStatusUseCase } from '../../application/use-cases/get-transaction-status.use-case';
 import { Ok, Err } from '../../application/use-cases/result';
 import { Transaction } from '../../domain/transaction';
+import { TransactionsRepositoryPort } from '../../application/ports/transactions-repository.port';
 
 describe('TransactionsController', () => {
   let controller: TransactionsController;
-  let useCase: jest.Mocked<GetTransactionStatusUseCase>;
+  let executeSpy: jest.SpyInstance;
 
   beforeEach(async () => {
+    const mockTransactionsRepository = {} as TransactionsRepositoryPort;
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TransactionsController],
       providers: [
         {
-          provide: GetTransactionStatusUseCase,
-          useValue: {
-            execute: jest.fn(),
-          },
+          provide: 'TRANSACTIONS_REPOSITORY',
+          useValue: mockTransactionsRepository,
         },
       ],
     }).compile();
 
     controller = module.get<TransactionsController>(TransactionsController);
-    useCase = module.get(GetTransactionStatusUseCase);
+    executeSpy = jest.spyOn(
+      GetTransactionStatusUseCase.prototype,
+      'execute',
+    );
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('returns transaction payload on success', async () => {
@@ -46,7 +54,7 @@ describe('TransactionsController', () => {
       },
     };
 
-    useCase.execute.mockResolvedValue(Ok({ transaction }));
+    executeSpy.mockResolvedValue(Ok({ transaction }));
 
     const result = await controller.getById('tx-1');
 
@@ -59,7 +67,7 @@ describe('TransactionsController', () => {
   });
 
   it('throws not found when transaction is missing', async () => {
-    useCase.execute.mockResolvedValue(Err('TRANSACTION_NOT_FOUND'));
+    executeSpy.mockResolvedValue(Err('TRANSACTION_NOT_FOUND'));
 
     await expect(controller.getById('tx-missing')).rejects.toThrow(
       'Transaction not found',
@@ -67,7 +75,7 @@ describe('TransactionsController', () => {
   });
 
   it('throws internal error when repository fails', async () => {
-    useCase.execute.mockResolvedValue(Err('DATABASE_ERROR'));
+    executeSpy.mockResolvedValue(Err('DATABASE_ERROR'));
 
     await expect(controller.getById('tx-1')).rejects.toThrow(
       'Internal server error',
