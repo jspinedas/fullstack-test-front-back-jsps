@@ -100,6 +100,15 @@ export const paymentFlowSlice = createSlice({
     setStep: (state, action: PayloadAction<PaymentStep>) => {
       state.step = action.payload;
     },
+    rehydratePaymentFlow: (
+      state,
+      action: PayloadAction<{ step: PaymentStep; transactionId: string | null }>,
+    ) => {
+      state.step = action.payload.step;
+      state.transactionId = action.payload.transactionId;
+      state.paymentIntentStatus = 'idle';
+      state.error = null;
+    },
     resetPaymentFlow: (state) => {
       state.step = 'product';
       state.paymentIntentStatus = 'idle';
@@ -139,6 +148,7 @@ export const paymentFlowSlice = createSlice({
   },
 });
 
-export const { setStep, resetPaymentFlow } = paymentFlowSlice.actions;
+export const { setStep, rehydratePaymentFlow, resetPaymentFlow } =
+  paymentFlowSlice.actions;
 
 export default paymentFlowSlice.reducer;
